@@ -124,6 +124,9 @@ public final class GreedyChunkMesher {
             case 3 -> { r = 0.9f; g = 0.8f; b = 0.5f; }
             case 4 -> { r = 0.5f; g = 0.4f; b = 0.3f; }
             case 5 -> { r = 1.0f; g = 1.0f; b = 1.0f; }
+            case 6 -> { r = 0.45f; g = 0.32f; b = 0.2f; }
+            case 7 -> { r = 0.22f; g = 0.55f; b = 0.22f; }
+            case 8 -> { r = 0.28f; g = 0.62f; b = 0.26f; }
         }
 
         int tile = tileForFace(type, nx, ny, nz);
@@ -197,6 +200,9 @@ public final class GreedyChunkMesher {
                 if (ny < -0.5f) yield BlockTextureAtlas.TILE_DIRT;
                 yield BlockTextureAtlas.TILE_GRASS_SIDE;
             }
+            case 6 -> Math.abs(ny) > 0.5f ? BlockTextureAtlas.TILE_LOG_TOP : BlockTextureAtlas.TILE_LOG_SIDE;
+            case 7 -> BlockTextureAtlas.TILE_LEAVES;
+            case 8 -> BlockTextureAtlas.TILE_FLORA;
             default -> BlockTextureAtlas.TILE_STONE;
         };
     }

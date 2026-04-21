@@ -23,6 +23,13 @@ public class BlockTextureAtlas {
     public static final int TILE_SNOW = 3;
     public static final int TILE_GRASS_TOP = 4;
     public static final int TILE_GRASS_SIDE = 5;
+    /** Log bark (all vertical faces). */
+    public static final int TILE_LOG_SIDE = 6;
+    public static final int TILE_LEAVES = 7;
+    /** Tall grass / small plants (single tile). */
+    public static final int TILE_FLORA = 0 + 1 * TILES_PER_ROW;
+    /** Log end grain (top / bottom). */
+    public static final int TILE_LOG_TOP = 1 + 1 * TILES_PER_ROW;
     /** Solid white — multiply with vertex color for untextured props / player. */
     public static final int TILE_NEUTRAL = 7 + 7 * TILES_PER_ROW;
 
@@ -41,6 +48,10 @@ public class BlockTextureAtlas {
         fillTile(data, 3, 0, 235, 245, 255, 12); // snow
         fillTile(data, 4, 0, 55, 140, 55, 22); // grass top
         fillGrassSideTile(data, 5, 0);
+        fillTile(data, 6, 0, 85, 55, 30, 20); // log bark
+        fillTile(data, 7, 0, 40, 110, 45, 24); // leaves
+        fillTile(data, 0, 1, 45, 120, 40, 22); // flora / tall grass
+        fillTile(data, 1, 1, 95, 70, 40, 18); // log top rings
         fillTile(data, 7, 7, 255, 255, 255, 0); // neutral / white
 
         textureId = glGenTextures();

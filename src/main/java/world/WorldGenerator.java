@@ -3,17 +3,22 @@ package world;
 import math.PerlinNoise;
 
 public class WorldGenerator {
+    private final long seed;
     private PerlinNoise elevationNoise;
     private PerlinNoise moistureNoise;
     private PerlinNoise temperatureNoise;
 
     public WorldGenerator(long seed) {
+        this.seed = seed;
         elevationNoise = new PerlinNoise(seed);
         moistureNoise = new PerlinNoise(seed + 100);
         temperatureNoise = new PerlinNoise(seed + 200);
     }
 
     public void generate(Chunk chunk, int chunkX, int chunkZ) {
+        int n = Chunk.SIZE;
+        int[] firstAirY = new int[n * n];
+
         for (int z = 0; z < Chunk.SIZE; z++) {
             for (int x = 0; x < Chunk.SIZE; x++) {
                 int globalX = chunkX * Chunk.SIZE + x;
@@ -65,7 +70,10 @@ public class WorldGenerator {
                         chunk.setVoxel(x, y, z, (byte) 1); // Stone
                     }
                 }
+                firstAirY[x + z * n] = height;
             }
         }
+
+        FeaturePlacer.decorate(chunk, chunkX, chunkZ, seed, firstAirY);
     }
 }
