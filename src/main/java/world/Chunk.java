@@ -32,4 +32,13 @@ public class Chunk {
             System.arraycopy(data, 0, voxels, 0, data.length);
         }
     }
+
+    /** Number of non-air voxels in this chunk (for render LOD). */
+    public static long countSolidVoxels(Chunk chunk) {
+        long c = 0;
+        for (byte v : chunk.getData()) {
+            if (v != 0) c++;
+        }
+        return c;
+    }
 }

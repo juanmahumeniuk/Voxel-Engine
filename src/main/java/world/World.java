@@ -7,11 +7,15 @@ import java.util.Map;
 public class World {
     public static class ChunkData {
         public Chunk chunk;
-        public Mesh mesh;
+        /** Written on main thread or mesh worker; render thread reads for draw. */
+        public volatile Mesh mesh;
         public int cx, cz;
+        /** Solid voxels in this chunk when it was added (for global LOD count). */
+        public long solidVoxelCount;
     }
     
     private Map<String, ChunkData> activeChunks = new HashMap<>();
+    private long totalSolidVoxels = 0;
 
     public void addChunk(int cx, int cz, Chunk chunk, Mesh mesh) {
         ChunkData cd = new ChunkData();
@@ -19,16 +23,35 @@ public class World {
         cd.mesh = mesh;
         cd.cx = cx;
         cd.cz = cz;
+        cd.solidVoxelCount = Chunk.countSolidVoxels(chunk);
+        totalSolidVoxels += cd.solidVoxelCount;
         activeChunks.put(cx + "," + cz, cd);
+    }
+
+    /** Attach GPU mesh when async build finishes; returns false if chunk was unloaded or mesh already set. */
+    public synchronized boolean assignChunkMeshIfPending(int cx, int cz, Mesh mesh) {
+        ChunkData cd = activeChunks.get(cx + "," + cz);
+        if (cd == null || cd.mesh != null) {
+            return false;
+        }
+        cd.mesh = mesh;
+        return true;
     }
     
     public void removeChunk(int cx, int cz) {
         ChunkData cd = activeChunks.remove(cx + "," + cz);
         if (cd != null) {
+            totalSolidVoxels -= cd.solidVoxelCount;
+            if (totalSolidVoxels < 0) totalSolidVoxels = 0;
             // Persistence: Save chunk data when it's unloaded from memory
             WorldPersistence.saveChunk(cx, cz, cd.chunk.getData());
             if (cd.mesh != null) cd.mesh.cleanup();
         }
+    }
+
+    /** Sum of solid voxels across all loaded chunks (used for texture LOD). */
+    public long getTotalSolidVoxels() {
+        return totalSolidVoxels;
     }
     
     public Iterable<ChunkData> getActiveChunks() {

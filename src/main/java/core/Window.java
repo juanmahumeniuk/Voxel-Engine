@@ -1,8 +1,10 @@
 package core;
 
 import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.system.MemoryStack;
+
+import java.nio.IntBuffer;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -59,17 +61,22 @@ public class Window {
             glViewport(0, 0, w, h);
         });
 
-        GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-        if (vidmode != null) {
-            glfwSetWindowPos(glfwWindow, (vidmode.width() - width) / 2, (vidmode.height() - height) / 2);
+        glfwMakeContextCurrent(glfwWindow);
+        GL.createCapabilities();
+        // 0 = uncapped frame rate (helps reach 60+ when GPU-bound); use 1 for V-Sync / tear-free cap.
+        glfwSwapInterval(0);
+        glfwShowWindow(glfwWindow);
+        glfwMaximizeWindow(glfwWindow);
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer w = stack.mallocInt(1);
+            IntBuffer h = stack.mallocInt(1);
+            glfwGetFramebufferSize(glfwWindow, w, h);
+            this.width = w.get(0);
+            this.height = h.get(0);
+            glViewport(0, 0, this.width, this.height);
         }
 
-        glfwMakeContextCurrent(glfwWindow);
-        glfwSwapInterval(1); // V-Sync
-        glfwShowWindow(glfwWindow);
-        
-        GL.createCapabilities();
-        
         glEnable(GL_DEPTH_TEST);
     }
 

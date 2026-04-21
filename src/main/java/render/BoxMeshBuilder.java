@@ -8,6 +8,7 @@ public class BoxMeshBuilder {
         List<Float> positions = new ArrayList<>();
         List<Float> colors = new ArrayList<>();
         List<Float> normals = new ArrayList<>();
+        List<Float> texCoords = new ArrayList<>();
         List<Integer> indices = new ArrayList<>();
 
         float hw = width / 2f;
@@ -15,22 +16,23 @@ public class BoxMeshBuilder {
         float hd = depth / 2f;
         
         // Face definitions with correct outward normals
-        addFace(positions, colors, normals, indices, new float[]{-hw, -h/2, hd,  hw, -h/2, hd,  hw, h/2, hd,  -hw, h/2, hd}, r, g, b, 0, 0, 1);
-        addFace(positions, colors, normals, indices, new float[]{hw, -h/2, -hd,  -hw, -h/2, -hd,  -hw, h/2, -hd,  hw, h/2, -hd}, r, g, b, 0, 0, -1);
-        addFace(positions, colors, normals, indices, new float[]{-hw, h/2, hd,  hw, h/2, hd,  hw, h/2, -hd,  -hw, h/2, -hd}, r, g, b, 0, 1, 0);
-        addFace(positions, colors, normals, indices, new float[]{-hw, -h/2, -hd,  hw, -h/2, -hd,  hw, -h/2, hd,  -hw, -h/2, hd}, r, g, b, 0, -1, 0);
-        addFace(positions, colors, normals, indices, new float[]{hw, -h/2, hd,  hw, -h/2, -hd,  hw, h/2, -hd,  hw, h/2, hd}, r, g, b, 1, 0, 0);
-        addFace(positions, colors, normals, indices, new float[]{-hw, -h/2, -hd,  -hw, -h/2, hd,  -hw, h/2, hd,  -hw, h/2, -hd}, r, g, b, -1, 0, 0);
+        addFace(positions, colors, normals, texCoords, indices, new float[]{-hw, -h/2, hd,  hw, -h/2, hd,  hw, h/2, hd,  -hw, h/2, hd}, r, g, b, 0, 0, 1);
+        addFace(positions, colors, normals, texCoords, indices, new float[]{hw, -h/2, -hd,  -hw, -h/2, -hd,  -hw, h/2, -hd,  hw, h/2, -hd}, r, g, b, 0, 0, -1);
+        addFace(positions, colors, normals, texCoords, indices, new float[]{-hw, h/2, hd,  hw, h/2, hd,  hw, h/2, -hd,  -hw, h/2, -hd}, r, g, b, 0, 1, 0);
+        addFace(positions, colors, normals, texCoords, indices, new float[]{-hw, -h/2, -hd,  hw, -h/2, -hd,  hw, -h/2, hd,  -hw, -h/2, hd}, r, g, b, 0, -1, 0);
+        addFace(positions, colors, normals, texCoords, indices, new float[]{hw, -h/2, hd,  hw, -h/2, -hd,  hw, h/2, -hd,  hw, h/2, hd}, r, g, b, 1, 0, 0);
+        addFace(positions, colors, normals, texCoords, indices, new float[]{-hw, -h/2, -hd,  -hw, -h/2, hd,  -hw, h/2, hd,  -hw, h/2, -hd}, r, g, b, -1, 0, 0);
 
         float[] posArr = new float[positions.size()]; for(int i=0;i<positions.size();i++) posArr[i]=positions.get(i);
         float[] colorArr = new float[colors.size()]; for(int i=0;i<colors.size();i++) colorArr[i]=colors.get(i);
         float[] normArr = new float[normals.size()]; for(int i=0;i<normals.size();i++) normArr[i]=normals.get(i);
+        float[] texArr = new float[texCoords.size()]; for(int i=0;i<texCoords.size();i++) texArr[i]=texCoords.get(i);
         int[] idxArr = new int[indices.size()]; for(int i=0;i<indices.size();i++) idxArr[i]=indices.get(i);
         
-        return new Mesh(posArr, colorArr, normArr, idxArr);
+        return new Mesh(posArr, colorArr, normArr, texArr, idxArr);
     }
 
-    private static void addFace(List<Float> positions, List<Float> colors, List<Float> normals, List<Integer> indices, 
+    private static void addFace(List<Float> positions, List<Float> colors, List<Float> normals, List<Float> texCoords, List<Integer> indices, 
             float[] vOffsets, float r, float g, float b, float nx, float ny, float nz) {
         int index = positions.size() / 3;
         for (int i = 0; i < 4; i++) {
@@ -40,6 +42,7 @@ public class BoxMeshBuilder {
             colors.add(r); colors.add(g); colors.add(b);
             normals.add(nx); normals.add(ny); normals.add(nz);
         }
+        BlockTextureAtlas.addTileTexCoords(texCoords, BlockTextureAtlas.TILE_NEUTRAL);
         indices.add(index); indices.add(index + 1); indices.add(index + 2);
         indices.add(index + 2); indices.add(index + 3); indices.add(index);
     }

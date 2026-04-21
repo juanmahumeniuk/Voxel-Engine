@@ -12,7 +12,12 @@ public class Mesh {
     private final List<Integer> vboIdList;
     private final int vertexCount;
 
-    public Mesh(float[] positions, float[] colors, float[] normals, int[] indices) {
+    /** Must be called on the thread that owns the current OpenGL context. */
+    public Mesh(MeshCpuData data) {
+        this(data.positions(), data.colors(), data.normals(), data.texCoords(), data.indices());
+    }
+
+    public Mesh(float[] positions, float[] colors, float[] normals, float[] texCoords, int[] indices) {
         vertexCount = indices.length;
         vboIdList = new ArrayList<>();
 
@@ -49,6 +54,16 @@ public class Mesh {
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 3, GL_FLOAT, false, 0, 0);
 
+        // Texture coordinates VBO
+        vboId = glGenBuffers();
+        vboIdList.add(vboId);
+        FloatBuffer uvBuffer = MemoryUtil.memAllocFloat(texCoords.length);
+        uvBuffer.put(texCoords).flip();
+        glBindBuffer(GL_ARRAY_BUFFER, vboId);
+        glBufferData(GL_ARRAY_BUFFER, uvBuffer, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 2, GL_FLOAT, false, 0, 0);
+
         // Index VBO
         vboId = glGenBuffers();
         vboIdList.add(vboId);
@@ -60,6 +75,7 @@ public class Mesh {
         MemoryUtil.memFree(posBuffer);
         MemoryUtil.memFree(colorBuffer);
         MemoryUtil.memFree(normBuffer);
+        MemoryUtil.memFree(uvBuffer);
         MemoryUtil.memFree(indicesBuffer);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -73,6 +89,7 @@ public class Mesh {
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
         glDisableVertexAttribArray(2);
+        glDisableVertexAttribArray(3);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         for (int vboId : vboIdList) {
             glDeleteBuffers(vboId);

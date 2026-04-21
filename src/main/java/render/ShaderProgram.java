@@ -1,5 +1,6 @@
 package render;
 
+import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
@@ -36,6 +37,15 @@ public class ShaderProgram {
         }
     }
 
+    public void setUniform(String uniformName, Matrix3f value) {
+        if (!uniforms.containsKey(uniformName)) return;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            FloatBuffer fb = stack.mallocFloat(9);
+            value.get(fb);
+            glUniformMatrix3fv(uniforms.get(uniformName), false, fb);
+        }
+    }
+
     public void setUniform(String uniformName, Vector3f value) {
         if (!uniforms.containsKey(uniformName)) return;
         glUniform3f(uniforms.get(uniformName), value.x, value.y, value.z);
@@ -44,6 +54,11 @@ public class ShaderProgram {
     public void setUniform(String uniformName, int value) {
         if (!uniforms.containsKey(uniformName)) return;
         glUniform1i(uniforms.get(uniformName), value);
+    }
+
+    public void setUniform(String uniformName, float value) {
+        if (!uniforms.containsKey(uniformName)) return;
+        glUniform1f(uniforms.get(uniformName), value);
     }
 
     public void createVertexShader(String shaderCode) throws Exception {

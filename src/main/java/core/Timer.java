@@ -36,6 +36,17 @@ public class Timer {
         }
     }
 
+    /** Call once per frame with the same delta returned by {@link #getElapsedTime()} to update FPS without double-consuming time. */
+    public void tickFrame(float deltaSeconds) {
+        timeCount += deltaSeconds;
+        fpsCount++;
+        if (timeCount >= 1f) {
+            fps = fpsCount;
+            fpsCount = 0;
+            timeCount -= 1f;
+        }
+    }
+
     public int getFPS() {
         return fps;
     }

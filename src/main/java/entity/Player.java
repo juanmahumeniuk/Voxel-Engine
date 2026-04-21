@@ -23,6 +23,19 @@ public class Player {
         velocity = new Vector3f();
     }
 
+    /** Snap player and camera after spawn preload (resets vertical smoothing). */
+    public void placeAtWorld(float x, float y, float z) {
+        model.x = x;
+        model.y = y;
+        model.z = z;
+        velocity.set(0, 0, 0);
+        isGrounded = true;
+        smoothedCameraY = -1f;
+        camera.getPosition().x = x;
+        camera.getPosition().y = y + 11.0f;
+        camera.getPosition().z = z;
+    }
+
     public void update(float dt, World world, boolean moveF, boolean moveB, boolean moveL, boolean moveR, boolean jump) {
         float speed = 25.0f; // Blocks (voxels) per second
         
