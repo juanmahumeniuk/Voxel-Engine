@@ -1,0 +1,54 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group 'com.voxelengine'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+project.ext.lwjglVersion = "3.3.3"
+project.ext.jomlVersion = "1.10.5"
+
+def osName = System.getProperty("os.name").toLowerCase()
+def osArch = System.getProperty("os.arch")
+
+if (osName.contains("linux")) {
+    project.ext.lwjglNatives = "natives-linux"
+} else if (osName.contains("mac")) {
+    project.ext.lwjglNatives = osArch.startsWith("aarch64") ? "natives-macos-arm64" : "natives-macos"
+} else if (osName.contains("win")) {
+    project.ext.lwjglNatives = osArch.contains("64") ? "natives-windows" : "natives-windows-x86"
+}
+
+
+dependencies {
+    implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+
+    implementation "org.lwjgl:lwjgl"
+    implementation "org.lwjgl:lwjgl-glfw"
+    implementation "org.lwjgl:lwjgl-opengl"
+    implementation "org.lwjgl:lwjgl-stb"
+    implementation "org.joml:joml:${jomlVersion}"
+
+    runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-opengl::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-stb::$lwjglNatives"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+application {
+    mainClass = 'core.Engine'
+}
