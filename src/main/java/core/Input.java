@@ -7,6 +7,7 @@ public class Input {
     private static boolean[] mouseButtons = new boolean[GLFW.GLFW_MOUSE_BUTTON_LAST];
     private static double mouseX, mouseY;
     private static double mouseDx, mouseDy;
+    private static double scrollY;
     private static boolean firstMouse = true;
 
     public static void keyCallback(long window, int key, int scancode, int action, int mods) {
@@ -33,6 +34,10 @@ public class Input {
         mouseY = ypos;
     }
 
+    public static void scrollCallback(long window, double xoffset, double yoffset) {
+        scrollY += yoffset;
+    }
+
     public static boolean isKeyDown(int key) {
         return keys[key];
     }
@@ -54,5 +59,11 @@ public class Input {
         double dy = mouseDy; 
         mouseDy = 0; 
         return dy; 
+    }
+
+    public static double consumeScrollY() {
+        double sy = scrollY;
+        scrollY = 0;
+        return sy;
     }
 }

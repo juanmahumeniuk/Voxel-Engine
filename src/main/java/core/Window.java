@@ -54,6 +54,7 @@ public class Window {
         glfwSetKeyCallback(glfwWindow, Input::keyCallback);
         glfwSetMouseButtonCallback(glfwWindow, Input::mouseButtonCallback);
         glfwSetCursorPosCallback(glfwWindow, Input::mouseCursorPosCallback);
+        glfwSetScrollCallback(glfwWindow, Input::scrollCallback);
 
         glfwSetFramebufferSizeCallback(glfwWindow, (window, w, h) -> {
             this.width = w;

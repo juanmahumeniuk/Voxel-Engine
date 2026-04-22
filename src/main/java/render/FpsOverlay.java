@@ -101,7 +101,9 @@ public class FpsOverlay {
         ortho.setOrtho(0, TEX_W, TEX_H, 0, -1f, 1f);
 
         boolean depth = glIsEnabled(GL_DEPTH_TEST);
+        boolean cull = glIsEnabled(GL_CULL_FACE);
         if (depth) glDisable(GL_DEPTH_TEST);
+        if (cull) glDisable(GL_CULL_FACE);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -120,6 +122,7 @@ public class FpsOverlay {
 
         glDisable(GL_BLEND);
         if (depth) glEnable(GL_DEPTH_TEST);
+        if (cull) glEnable(GL_CULL_FACE);
 
         glViewport(vp[0], vp[1], vp[2], vp[3]);
     }

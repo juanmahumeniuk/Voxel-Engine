@@ -75,4 +75,32 @@ public class World {
         int lz = z - cz * Chunk.SIZE;
         return cd.chunk.getVoxel(lx, y, lz);
     }
+
+    /**
+     * Set one voxel in loaded chunks and rebuild that chunk mesh immediately on the render thread.
+     */
+    public boolean setVoxelAndRebuild(int x, int y, int z, byte type) {
+        if (y < 0 || y >= Chunk.SIZE) return false;
+        int cx = Math.floorDiv(x, Chunk.SIZE);
+        int cz = Math.floorDiv(z, Chunk.SIZE);
+        ChunkData cd = activeChunks.get(cx + "," + cz);
+        if (cd == null) return false;
+
+        int lx = x - cx * Chunk.SIZE;
+        int lz = z - cz * Chunk.SIZE;
+        byte old = cd.chunk.getVoxel(lx, y, lz);
+        if (old == type) return false;
+
+        cd.chunk.setVoxel(lx, y, lz, type);
+        if (old != 0) totalSolidVoxels--;
+        if (type != 0) totalSolidVoxels++;
+        if (totalSolidVoxels < 0) totalSolidVoxels = 0;
+        cd.solidVoxelCount = Chunk.countSolidVoxels(cd.chunk);
+
+        if (cd.mesh != null) {
+            cd.mesh.cleanup();
+        }
+        cd.mesh = ChunkMesher.buildMesh(cd.chunk);
+        return true;
+    }
 }

@@ -1,52 +1,59 @@
 package world;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.util.zip.*;
 
 public class WorldPersistence {
-    private static final String SAVE_FILE = "world_save/region_0_0.vxl";
+    private static final String SAVE_DIR = "world_save";
+    private static final int WORLD_FORMAT_VERSION = 5;
+    private static final String SAVE_FILE = SAVE_DIR + "/region_v" + WORLD_FORMAT_VERSION + "_0_0.vxl";
     private static final int SECTOR_SIZE = 4096;
     private static final int REGION_SIZE = 64; // Supports 64x64 chunks (4096 entries)
     private static RandomAccessFile file;
-    private static int[] offsetTable = new int[REGION_SIZE * REGION_SIZE];
+    private static final int[] offsetTable = new int[REGION_SIZE * REGION_SIZE];
 
     static {
         try {
-            File dir = new File("world_save/");
-            if (!dir.exists()) dir.mkdirs();
-            
-            file = new RandomAccessFile(SAVE_FILE, "rw");
-            if (file.length() < SECTOR_SIZE * 4) { // Fill header if new file
-                file.setLength(SECTOR_SIZE * 4);
-                file.seek(0);
-                for (int i = 0; i < offsetTable.length; i++) file.writeInt(0);
-            }
-            
-            file.seek(0);
-            for (int i = 0; i < offsetTable.length; i++) {
-                offsetTable[i] = file.readInt();
-            }
+            ensureOpen();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void ensureOpen() throws IOException {
+        if (file != null) return;
+
+        File dir = new File(SAVE_DIR);
+        if (!dir.exists()) dir.mkdirs();
+
+        file = new RandomAccessFile(SAVE_FILE, "rw");
+        if (file.length() < SECTOR_SIZE * 4L) { // Fill header if new file
+            file.setLength(SECTOR_SIZE * 4L);
+            file.seek(0);
+            for (int i = 0; i < offsetTable.length; i++) file.writeInt(0);
+        }
+
+        file.seek(0);
+        for (int i = 0; i < offsetTable.length; i++) {
+            offsetTable[i] = file.readInt();
         }
     }
 
     public static synchronized byte[] loadChunk(int cx, int cz) {
         int index = getIndex(cx, cz);
         if (index < 0 || index >= offsetTable.length) return null;
-        
-        int sectorOffset = offsetTable[index];
-        if (sectorOffset == 0) return null;
-
         try {
+            ensureOpen();
+            int sectorOffset = offsetTable[index];
+            if (sectorOffset == 0) return null;
+
             file.seek((long) sectorOffset * SECTOR_SIZE);
             int length = file.readInt();
-            byte version = file.readByte(); // Version 1 = Zlib
-            
+            file.readByte(); // Version 1 = Zlib
+
             byte[] compressed = new byte[length - 1];
             file.readFully(compressed);
-            
+
             return decompress(compressed);
         } catch (Exception e) {
             e.printStackTrace();
@@ -59,22 +66,22 @@ public class WorldPersistence {
         if (index < 0 || index >= offsetTable.length) return;
 
         try {
+            ensureOpen();
             byte[] compressed = compress(data);
             int sectorsNeeded = (compressed.length + 5 + SECTOR_SIZE - 1) / SECTOR_SIZE;
-            
-            // For simplicity, always append to end of file and update pointer 
+
+            // For simplicity, always append to end of file and update pointer
             // (A true Anvil implementation would reuse sectors, but here the complexity is limited)
             int sectorOffset = (int) (file.length() / SECTOR_SIZE);
-            
+
             file.seek((long) sectorOffset * SECTOR_SIZE);
             file.writeInt(compressed.length + 1);
             file.writeByte(1); // Zlib
             file.write(compressed);
             
             // Pad to sector boundary
-            long currentPos = file.getFilePointer();
             long padding = (long) sectorsNeeded * SECTOR_SIZE - (compressed.length + 5);
-            if (padding > 0) file.write(new byte[(int)padding]);
+            if (padding > 0) file.write(new byte[(int) padding]);
 
             // Update header
             offsetTable[index] = sectorOffset;
@@ -111,6 +118,37 @@ public class WorldPersistence {
     }
 
     public static void close() {
-        try { if (file != null) file.close(); } catch (IOException e) {}
+        try {
+            if (file != null) file.close();
+        } catch (IOException ignored) {
+        } finally {
+            file = null;
+        }
+    }
+
+    public static synchronized boolean hasSavedWorld() {
+        try {
+            ensureOpen();
+            for (int offset : offsetTable) {
+                if (offset != 0) return true;
+            }
+            return false;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static synchronized void clearWorld() {
+        close();
+        File saveFile = new File(SAVE_FILE);
+        if (saveFile.exists() && !saveFile.delete()) {
+            System.err.println("Could not delete existing world save file: " + saveFile.getAbsolutePath());
+        }
+        try {
+            ensureOpen();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

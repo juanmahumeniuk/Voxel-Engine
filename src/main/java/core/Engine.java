@@ -1,11 +1,15 @@
 package core;
 
 import entity.Player;
+import entity.WeaponSystem;
 
 import render.FpsOverlay;
+import render.BulletTracerRenderer;
+import render.MainMenu;
 import render.RenderLod;
 import render.Renderer;
 import render.SkyRenderer;
+import render.WeaponOverlay;
 import world.Chunk;
 import world.ChunkMeshExecutor;
 import world.ChunkMesher;
@@ -29,15 +33,100 @@ public class Engine {
         window.init();
 
         long handle = window.getHandle();
-        glfwSetInputMode(handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
         ChunkMeshExecutor meshExecutor = null;
+        MainMenu mainMenu = null;
         try {
+            boolean vSyncEnabled = false;
+            mainMenu = new MainMenu();
+            mainMenu.setCanContinue(WorldPersistence.hasSavedWorld());
+            mainMenu.setVSyncEnabled(vSyncEnabled);
+            glfwSetInputMode(handle, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+            boolean prevUp = false;
+            boolean prevDown = false;
+            boolean prevLeft = false;
+            boolean prevRight = false;
+            boolean prevEnter = false;
+            boolean prevEscape = false;
+            boolean startGame = false;
+
+            while (!glfwWindowShouldClose(handle) && !startGame) {
+                glfwPollEvents();
+
+                boolean up = Input.isKeyDown(GLFW_KEY_UP) || Input.isKeyDown(GLFW_KEY_W);
+                boolean down = Input.isKeyDown(GLFW_KEY_DOWN) || Input.isKeyDown(GLFW_KEY_S);
+                boolean left = Input.isKeyDown(GLFW_KEY_LEFT) || Input.isKeyDown(GLFW_KEY_A);
+                boolean right = Input.isKeyDown(GLFW_KEY_RIGHT) || Input.isKeyDown(GLFW_KEY_D);
+                boolean enter = Input.isKeyDown(GLFW_KEY_ENTER);
+                boolean escape = Input.isKeyDown(GLFW_KEY_ESCAPE);
+
+                if (up && !prevUp) {
+                    mainMenu.selectPrev();
+                }
+                if (down && !prevDown) {
+                    mainMenu.selectNext();
+                }
+                if ((left && !prevLeft) || (right && !prevRight)) {
+                    if (mainMenu.getSelectedAction() == MainMenu.ACTION_OPTIONS) {
+                        vSyncEnabled = !vSyncEnabled;
+                        glfwSwapInterval(vSyncEnabled ? 1 : 0);
+                        mainMenu.setVSyncEnabled(vSyncEnabled);
+                        mainMenu.setStatusMessage("VSync actualizado.");
+                    }
+                }
+                if (enter && !prevEnter) {
+                    int action = mainMenu.getSelectedAction();
+                    if (action == MainMenu.ACTION_NEW_WORLD) {
+                        WorldPersistence.clearWorld();
+                        mainMenu.setCanContinue(false);
+                        mainMenu.setStatusMessage("Se creo un mundo nuevo.");
+                        startGame = true;
+                    } else if (action == MainMenu.ACTION_CONTINUE_WORLD) {
+                        if (WorldPersistence.hasSavedWorld()) {
+                            mainMenu.setStatusMessage("Cargando mundo guardado...");
+                            startGame = true;
+                        } else {
+                            mainMenu.setStatusMessage("No hay mundo guardado para continuar.");
+                        }
+                    } else if (action == MainMenu.ACTION_OPTIONS) {
+                        vSyncEnabled = !vSyncEnabled;
+                        glfwSwapInterval(vSyncEnabled ? 1 : 0);
+                        mainMenu.setVSyncEnabled(vSyncEnabled);
+                        mainMenu.setStatusMessage("VSync actualizado.");
+                    }
+                }
+                if (escape && !prevEscape) {
+                    glfwSetWindowShouldClose(handle, true);
+                }
+
+                prevUp = up;
+                prevDown = down;
+                prevLeft = left;
+                prevRight = right;
+                prevEnter = enter;
+                prevEscape = escape;
+
+                glClearColor(0.03f, 0.03f, 0.05f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                mainMenu.render(window.getWidth(), window.getHeight());
+                glfwSwapBuffers(handle);
+            }
+
+            mainMenu.cleanup();
+            mainMenu = null;
+            if (glfwWindowShouldClose(handle)) {
+                return;
+            }
+            glfwSetInputMode(handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
             Renderer renderer = new Renderer();
             renderer.init();
             SkyRenderer skyRenderer = new SkyRenderer();
             skyRenderer.init();
             FpsOverlay fpsOverlay = new FpsOverlay();
+            WeaponOverlay weaponOverlay = new WeaponOverlay();
+            BulletTracerRenderer tracerRenderer = new BulletTracerRenderer();
 
             /** Omnidirectional chunks around camera (streaming / simulation). */
             int defaultRadius = 7;
@@ -54,6 +143,7 @@ public class Engine {
             meshExecutor = new ChunkMeshExecutor();
 
             Player player = new Player();
+            WeaponSystem weaponSystem = new WeaponSystem();
             player.model.x = Chunk.SIZE / 2.0f;
             player.model.y = 80.0f;
             player.model.z = Chunk.SIZE / 2.0f;
@@ -75,6 +165,14 @@ public class Engine {
 
             Timer timer = new Timer();
             timer.init();
+            boolean prevFire = false;
+            boolean prevReload = false;
+            boolean prevSwitch1 = false;
+            boolean prevSwitch2 = false;
+            boolean prevSwitch3 = false;
+            boolean prevSwitch4 = false;
+            boolean prevSlide = false;
+            boolean sprintLatched = false;
 
             while (!glfwWindowShouldClose(handle)) {
                 glfwPollEvents();
@@ -92,9 +190,43 @@ public class Engine {
                 if (dt > 0.1f) dt = 0.1f;
                 timer.tickFrame(dt);
 
+                boolean ads = Input.isMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
+                boolean shiftHeld = Input.isKeyDown(GLFW_KEY_LEFT_SHIFT) || Input.isKeyDown(GLFW_KEY_RIGHT_SHIFT);
+                boolean forwardHeld = Input.isKeyDown(GLFW_KEY_W);
+                if (forwardHeld && shiftHeld) {
+                    sprintLatched = true;
+                } else if (!forwardHeld) {
+                    sprintLatched = false;
+                }
+                boolean sprint = shiftHeld || sprintLatched;
+                boolean slideNow = Input.isKeyDown(GLFW_KEY_LEFT_CONTROL) || Input.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
+                boolean slidePressed = slideNow && !prevSlide;
+                boolean fireHeld = Input.isMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+                boolean firePressed = fireHeld && !prevFire;
+                boolean reloadNow = Input.isKeyDown(GLFW_KEY_R);
+                boolean reloadPressed = reloadNow && !prevReload;
+                boolean switch1Now = Input.isKeyDown(GLFW_KEY_1);
+                boolean switch2Now = Input.isKeyDown(GLFW_KEY_2);
+                boolean switch3Now = Input.isKeyDown(GLFW_KEY_3);
+                boolean switch4Now = Input.isKeyDown(GLFW_KEY_4);
+                boolean switch1Pressed = switch1Now && !prevSwitch1;
+                boolean switch2Pressed = switch2Now && !prevSwitch2;
+                boolean switch3Pressed = switch3Now && !prevSwitch3;
+                boolean switch4Pressed = switch4Now && !prevSwitch4;
+                int wheelSteps = (int) Math.signum(Input.consumeScrollY());
+
+                weaponSystem.update(dt, fireHeld, firePressed, ads, reloadPressed,
+                        switch1Pressed, switch2Pressed, switch3Pressed, switch4Pressed, wheelSteps,
+                        world, player.camera);
+                for (WeaponSystem.ShotTrace t : weaponSystem.consumeShotTraces()) {
+                    tracerRenderer.spawnTrace(t.sx(), t.sy(), t.sz(), t.ex(), t.ey(), t.ez());
+                }
+                tracerRenderer.update(dt);
+
                 double dxMouse = Input.getMouseDx();
                 double dyMouse = Input.getMouseDy();
-                player.camera.moveRotation((float) dyMouse * 0.15f, (float) dxMouse * 0.15f, 0);
+                float sensitivity = 0.15f - weaponSystem.getAdsProgress() * 0.08f;
+                player.camera.moveRotation((float) dyMouse * sensitivity, (float) dxMouse * sensitivity, 0);
                 
                 if (player.camera.getRotation().x > 89.0f) player.camera.getRotation().x = 89.0f;
                 if (player.camera.getRotation().x < -89.0f) player.camera.getRotation().x = -89.0f;
@@ -102,7 +234,18 @@ public class Engine {
                 player.update(dt, world, 
                         Input.isKeyDown(GLFW_KEY_W), Input.isKeyDown(GLFW_KEY_S), 
                         Input.isKeyDown(GLFW_KEY_A), Input.isKeyDown(GLFW_KEY_D), 
-                        Input.isKeyDown(GLFW_KEY_SPACE));
+                        Input.isKeyDown(GLFW_KEY_SPACE), sprint, weaponSystem.isAimingDownSights(),
+                        slidePressed, slideNow);
+                player.model.setWeaponAnimation(weaponSystem.getRecoilKick(),
+                        weaponSystem.getReloadProgress(), weaponSystem.getAdsProgress());
+
+                prevFire = fireHeld;
+                prevReload = reloadNow;
+                prevSwitch1 = switch1Now;
+                prevSwitch2 = switch2Now;
+                prevSwitch3 = switch3Now;
+                prevSwitch4 = switch4Now;
+                prevSlide = slideNow;
 
                 int camChunkX = (int) Math.floor(player.camera.getPosition().x / Chunk.SIZE);
                 int camChunkZ = (int) Math.floor(player.camera.getPosition().z / Chunk.SIZE);
@@ -169,7 +312,8 @@ public class Engine {
                 skyRenderer.render(player.camera, window.getWidth(), window.getHeight(), (float) glfwGetTime());
 
                 int solidAlbedoMode = world.getTotalSolidVoxels() >= RenderLod.TEXTURE_OFF_SOLID_VOXEL_THRESHOLD ? 1 : 0;
-                renderer.beginRender(player.camera, window.getWidth(), window.getHeight(), solidAlbedoMode);
+                renderer.beginRender(player.camera, window.getWidth(), window.getHeight(), solidAlbedoMode,
+                        weaponSystem.getCurrentFovDegrees());
                 for (World.ChunkData instance : world.getActiveChunks()) {
                     int dcx = Math.abs(instance.cx - camChunkX);
                     int dcz = Math.abs(instance.cz - camChunkZ);
@@ -189,9 +333,13 @@ public class Engine {
                     renderer.renderMesh(instance.mesh, minX, 0, minZ);
                 }
                 player.model.render(renderer);
+                tracerRenderer.render(renderer);
                 renderer.endRender();
 
                 fpsOverlay.render(timer.getFPS(), window.getWidth(), window.getHeight());
+                weaponOverlay.render(weaponSystem.getCurrentWeaponName(), weaponSystem.getAmmoInMag(),
+                        weaponSystem.getReserveAmmo(), weaponSystem.getAdsProgress(), weaponSystem.getReloadProgress(),
+                        window.getWidth(), window.getHeight());
 
                 glfwSwapBuffers(handle);
             }
@@ -214,11 +362,16 @@ public class Engine {
             renderer.cleanup();
             skyRenderer.cleanup();
             fpsOverlay.cleanup();
+            weaponOverlay.cleanup();
+            tracerRenderer.cleanup();
             WorldPersistence.close();
 
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            if (mainMenu != null) {
+                mainMenu.cleanup();
+            }
             if (meshExecutor != null) {
                 meshExecutor.close();
             }

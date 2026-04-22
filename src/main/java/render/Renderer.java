@@ -77,6 +77,14 @@ public class Renderer {
      * @param solidAlbedoMode 1 = skip block atlas (flat vertex color), 0 = textured (LOD under threshold).
      */
     public void beginRender(Camera camera, int windowWidth, int windowHeight, int solidAlbedoMode) {
+        beginRender(camera, windowWidth, windowHeight, solidAlbedoMode, 60.0f);
+    }
+
+    /**
+     * @param solidAlbedoMode 1 = skip block atlas (flat vertex color), 0 = textured (LOD under threshold).
+     * @param fovDegrees Field of view for camera projection.
+     */
+    public void beginRender(Camera camera, int windowWidth, int windowHeight, int solidAlbedoMode, float fovDegrees) {
         if (windowWidth <= 0 || windowHeight <= 0) {
             frustumValid = false;
             return;
@@ -87,7 +95,7 @@ public class Renderer {
         shaderProgram.setUniform("blockAtlas", 0);
         shaderProgram.setUniform("solidAlbedoMode", solidAlbedoMode);
 
-        float fov = (float) Math.toRadians(60.0f);
+        float fov = (float) Math.toRadians(fovDegrees);
         projectionMatrix.setPerspective(fov, (float) windowWidth / windowHeight, 0.1f, 1000.f);
         viewMatrix.identity();
         viewMatrix.rotateX((float)Math.toRadians(camera.getRotation().x));
